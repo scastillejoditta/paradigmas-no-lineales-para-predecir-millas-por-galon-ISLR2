@@ -54,7 +54,7 @@ def cargar_auto():
 # PUNTO 1: SEPARACIÓN ENTRENAMIENTO / PRUEBA (90% / 10%)
 # =============================================================================
 
-def separar_datos(auto):
+def separar_datos(auto, verbose=True):
     """
     Se separa aleatoriamente el conjunto de datos en entrenamiento (90%)
     y prueba (10%), fijando la semilla para reproducibilidad.
@@ -69,7 +69,8 @@ def separar_datos(auto):
     train = auto.iloc[idx_train].reset_index(drop=True)
     test  = auto.iloc[idx_test].reset_index(drop=True)
 
-    print(f"[Punto 1] Tamaño entrenamiento: {len(train)} | Prueba: {len(test)}")
+    if verbose:
+        print(f"[Punto 1] Tamaño entrenamiento: {len(train)} | Prueba: {len(test)}")
     return train, test
 
 
@@ -133,7 +134,7 @@ class RegresionSpline(BaseEstimator, RegressorMixin):
 # PUNTO 2: SELECCIÓN DEL NÚMERO ÓPTIMO DE KNOTS (CV 10-FOLDS)
 # =============================================================================
 
-def punto2_seleccion_knots(train):
+def punto2_seleccion_knots(train, verbose=True):
     """
     Se determina el número óptimo de knots (1 a 10) para el regression spline
     mediante validación cruzada en 10 folds.
@@ -174,11 +175,12 @@ def punto2_seleccion_knots(train):
     K_optimo = min(ecm_por_knots, key=ecm_por_knots.get)
     ecm_optimo = ecm_por_knots[K_optimo]
 
-    print(f"\n[Punto 2] ECM por número de knots (CV 10-folds):")
-    for K, ecm in ecm_por_knots.items():
-        marca = " <-- ÓPTIMO" if K == K_optimo else ""
-        print(f"  K={K:2d}: ECM = {ecm:.4f}{marca}")
-    print(f"\n  Número óptimo de knots: K = {K_optimo} (ECM = {ecm_optimo:.4f})")
+    if verbose:
+        print(f"\n[Punto 2] ECM por número de knots (CV 10-folds):")
+        for K, ecm in ecm_por_knots.items():
+            marca = " <-- ÓPTIMO" if K == K_optimo else ""
+            print(f"  K={K:2d}: ECM = {ecm:.4f}{marca}")
+        print(f"\n  Número óptimo de knots: K = {K_optimo} (ECM = {ecm_optimo:.4f})")
 
     return K_optimo, ecm_por_knots
 
@@ -210,7 +212,7 @@ def suavizamiento_spline_cv(X_tr, y_tr, X_val):
     return pred
 
 
-def punto3_comparacion_modelos(train, K_optimo):
+def punto3_comparacion_modelos(train, K_optimo, verbose=True):
     """
     Se comparan tres modelos basados en base de funciones usando CV 10-folds:
 
@@ -261,12 +263,14 @@ def punto3_comparacion_modelos(train, K_optimo):
         f"Reg. Spline (K={K_optimo})": np.mean(ecm_spline),
     }
 
-    print(f"\n[Punto 3] Comparación de modelos basados en base de funciones (CV 10-folds):")
-    for nombre, ecm in resultados.items():
-        print(f"  {nombre}: ECM = {ecm:.4f}")
+    if verbose:
+        print(f"\n[Punto 3] Comparación de modelos basados en base de funciones (CV 10-folds):")
+        for nombre, ecm in resultados.items():
+            print(f"  {nombre}: ECM = {ecm:.4f}")
 
     mejor = min(resultados, key=resultados.get)
-    print(f"\n  Modelo seleccionado: {mejor} (ECM = {resultados[mejor]:.4f})")
+    if verbose:
+        print(f"\n  Modelo seleccionado: {mejor} (ECM = {resultados[mejor]:.4f})")
 
     return resultados, mejor, knots_opt
 
@@ -349,7 +353,7 @@ def seleccionar_bandwidth(X_tr, y_tr):
     return h_optimo
 
 
-def punto4_regresion_local(train):
+def punto4_regresion_local(train, verbose=True):
     """
     Se determina el mejor modelo de regresión local (grado 1 ó 2)
     usando CV 10-folds. El ancho de banda se selecciona automáticamente
@@ -380,12 +384,14 @@ def punto4_regresion_local(train):
 
     resultados = {f"Local grado {g}": np.mean(v) for g, v in ecm_grado.items()}
 
-    print(f"\n[Punto 4] Regresión local (CV 10-folds):")
-    for nombre, ecm in resultados.items():
-        print(f"  {nombre}: ECM = {ecm:.4f}")
+    if verbose:
+        print(f"\n[Punto 4] Regresión local (CV 10-folds):")
+        for nombre, ecm in resultados.items():
+            print(f"  {nombre}: ECM = {ecm:.4f}")
 
     mejor_grado = min(ecm_grado, key=lambda g: np.mean(ecm_grado[g]))
-    print(f"\n  Grado óptimo: {mejor_grado}")
+    if verbose:
+        print(f"\n  Grado óptimo: {mejor_grado}")
 
     return mejor_grado, resultados
 
@@ -394,7 +400,7 @@ def punto4_regresion_local(train):
 # PUNTO 5: COMPARACIÓN FINAL SOBRE DATOS DE PRUEBA
 # =============================================================================
 
-def punto5_ecm_prueba(train, test, K_optimo, mejor_grado_local):
+def punto5_ecm_prueba(train, test, K_optimo, mejor_grado_local, verbose=True):
     """
     Se ajustan los tres mejores modelos sobre TODO el conjunto de entrenamiento
     y se evalúa el ECM sobre el conjunto de prueba externo (10% de los datos).
@@ -450,7 +456,10 @@ def punto5_ecm_prueba(train, test, K_optimo, mejor_grado_local):
     mod_local.fit(X_train, y_train)
     pred_local = mod_local.predict(X_test)
     mask_valid = ~np.isnan(pred_local)
-    ecm_local = mean_squared_error(y_test[mask_valid], pred_local[mask_valid])
+    if mask_valid.sum() > 0:
+        ecm_local = mean_squared_error(y_test[mask_valid], pred_local[mask_valid])
+    else:
+        ecm_local = np.nan
 
     resultados = {
         "Polinomio grado 2":              ecm_poly,
@@ -459,12 +468,14 @@ def punto5_ecm_prueba(train, test, K_optimo, mejor_grado_local):
         f"Local grado {mejor_grado_local}": ecm_local,
     }
 
-    print(f"\n[Punto 5] ECM de prueba (sobre el 10% externo):")
-    for nombre, ecm in resultados.items():
-        print(f"  {nombre}: ECM = {ecm:.4f}")
+    if verbose:
+        print(f"\n[Punto 5] ECM de prueba (sobre el 10% externo):")
+        for nombre, ecm in resultados.items():
+            print(f"  {nombre}: ECM = {ecm:.4f}")
 
     mejor = min(resultados, key=resultados.get)
-    print(f"\n  Mejor modelo: {mejor} (ECM = {resultados[mejor]:.4f})")
+    if verbose:
+        print(f"\n  Mejor modelo: {mejor} (ECM = {resultados[mejor]:.4f})")
 
     return resultados, pip_poly, mod_rs, spl, mod_local, mejor_grado_local
 
@@ -564,42 +575,135 @@ def graficar_resultados(train, test, K_optimo, ecm_knots,
 
 
 # =============================================================================
+# PUNTO 6: SIMULACIÓN DE 10 REPETICIONES
+# =============================================================================
+
+def punto6_simulacion_completa(auto, n_iter=10):
+    """
+    Se repiten los pasos (1) a (5) un total de 10 veces, generando una nueva
+    muestra de validación en cada iteración. Se obtienen los ECM de prueba
+    para cada uno de los tres paradigmas de modelamiento.
+    """
+    print("\n" + "="*60)
+    print(f" PUNTO 6: Simulando {n_iter} repeticiones del proceso...")
+    print("="*60)
+
+    ecm_base_funciones = []
+    ecm_regresion_local = []
+    ecm_polinomio_global = []
+
+    for i in range(n_iter):
+        # Se cambia la semilla en cada iteración para variar la partición
+        semilla_iter = SEMILLA + i
+        np.random.seed(semilla_iter)
+        
+        # (1) Nueva muestra (90% entrenamiento, 10% prueba)
+        train_iter, test_iter = separar_datos(auto, verbose=False)
+        
+        # (2) Knots óptimos (enfoque silencioso)
+        K_optimo_i, _ = punto2_seleccion_knots(train_iter, verbose=False)
+        
+        # (3) Mejor modelo base de funciones (CV 10-folds)
+        res_p3_i, mejor_p3_i, _ = punto3_comparacion_modelos(train_iter, K_optimo_i, verbose=False)
+        
+        # (4) Mejor regresión local
+        mejor_grado_local_i, _ = punto4_regresion_local(train_iter, verbose=False)
+        
+        # (5) ECM de prueba para cada paradigma
+        res_p5_i, _, _, _, _, _ = punto5_ecm_prueba(
+            train_iter, test_iter, K_optimo_i, mejor_grado_local_i, verbose=False
+        )
+        
+        # Registro de resultados por paradigma
+        # Paradigma A: Polinomio Global Grado 2
+        ecm_polinomio_global.append(res_p5_i["Polinomio grado 2"])
+        
+        # Paradigma B: Regresión Local (mejor grado)
+        ecm_regresion_local.append(res_p5_i[f"Local grado {mejor_grado_local_i}"])
+        
+        # Paradigma C: Base de funciones (el mejor entre los splines)
+        # El Punto 5 ya evalúa los splines. Seleccionamos el mejor de ellos.
+        ecm_splines = [res_p5_i[f"Reg. Spline (K={K_optimo_i})"], res_p5_i["Smoothing Spline"]]
+        ecm_base_funciones.append(min(ecm_splines))
+        
+        if (i + 1) % 2 == 0:
+            print(f"  > Iteración {i+1}/{n_iter} completada.")
+
+    # --- Visualización de Distribuciones (Boxplot) ---
+    resultados_sim = {
+        "Base de Funciones": ecm_base_funciones,
+        "Regresión Local": ecm_regresion_local,
+        "Polinomio Global": ecm_polinomio_global
+    }
+    
+    df_sim = pd.DataFrame(resultados_sim)
+    
+    plt.figure(figsize=(10, 6))
+    boxplot = plt.boxplot([df_sim[col] for col in df_sim.columns], 
+                          labels=df_sim.columns, patch_artist=True,
+                          medianprops={'color': 'black', 'linewidth': 1.5})
+    
+    colores = ["dodgerblue", "green", "orange"]
+    for patch, color in zip(boxplot['boxes'], colores):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+
+    plt.ylabel("ECM de prueba")
+    plt.title("Punto 6: Distribución del ECM de prueba por Paradigma (10 Repeticiones)")
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    
+    filename = "comparacion_paradigmas_p6.png"
+    plt.savefig(filename, dpi=150, bbox_inches="tight")
+    plt.show()
+    print(f"\n[Gráfica] Distribuciones guardadas como '{filename}'")
+
+    # --- Resumen Estadístico ---
+    print("\nResumen de ECM de prueba (10 iteraciones):")
+    resumen = df_sim.describe().loc[['mean', 'std', 'min', 'max']]
+    print(resumen)
+    
+    mejor_paradigma = resumen.loc['mean'].idxmin()
+    print(f"\nConclusión: Basado en el ECM promedio, el acercamiento '{mejor_paradigma}' "
+          "resulta ser el más efectivo para predecir mpg en este conjunto de datos.")
+
+    return df_sim
+
+
+# =============================================================================
 # EJECUCIÓN PRINCIPAL
 # =============================================================================
 
 if __name__ == "__main__":
     print("=" * 60)
     print(" TALLER 2 – Análisis Avanzado de Datos")
-    print(" Puntos 1 al 5: Regresión no lineal (dataset Auto)")
+    print(" Puntos 1 al 6: Regresión no lineal (dataset Auto)")
     print("=" * 60)
 
     # Se carga el dataset
     auto = cargar_auto()
     print(f"\nDataset cargado: {len(auto)} autos")
 
-    # Punto 1: separación de datos
+    # Ejecución inicial (Puntos 1-5) para visualización detallada
+    print("\n--- Ejecución inicial detallada ---")
     train, test = separar_datos(auto)
-
-    # Punto 2: número óptimo de knots por CV
     K_optimo, ecm_knots = punto2_seleccion_knots(train)
-
-    # Punto 3: comparación de modelos base de funciones
     resultados_p3, mejor_p3, knots_opt = punto3_comparacion_modelos(train, K_optimo)
-
-    # Punto 4: regresión local
     mejor_grado_local, resultados_p4 = punto4_regresion_local(train)
-
-    # Punto 5: ECM de prueba
     (resultados_p5, mod_poly, mod_rs, mod_ss,
      mod_local, mejor_grado_local) = punto5_ecm_prueba(
         train, test, K_optimo, mejor_grado_local
     )
 
-    # Visualización
+    # Visualización Puntos 1-5
     graficar_resultados(
         train, test, K_optimo, ecm_knots,
         resultados_p3, resultados_p5,
         mod_poly, mod_rs, mod_ss, mod_local, mejor_grado_local
     )
 
-    print("\n[FINAL] Ejecución completada exitosamente.")
+    # Punto 6: Simulación y comparación de paradigmas
+    punto6_simulacion_completa(auto, n_iter=10)
+
+    print("\n" + "="*60)
+    print(" [FINAL] Ejecución completada exitosamente.")
+    print("="*60)

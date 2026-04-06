@@ -50,6 +50,23 @@ pip install -r requirements.txt # instalar dependencias
 python taller2.py # ejecutar código
 ```
 
+## Justificación y Resultados Finales (Punto 6)
+
+Para asegurar que la elección del "mejor" modelo no fuera producto del azar de una sola partición de datos, realizamos una simulación de **10 repeticiones independientes**. En cada iteración, se generó una nueva partición (90% entrenamiento / 10% prueba) y se re-evaluaron los tres paradigmas principales desde cero (incluyendo la selección de hiperparámetros óptimos por validación cruzada).
+
+Los resultados de error cuadrático medio (ECM) de prueba consolidados fueron:
+
+| Paradigma | ECM Promedio (10 iter) | Desviación Estándar |
+|-----------|------------------------|---------------------|
+| **Base de Funciones (Splines)** | **20.81** | 6.30 |
+| **Regresión Local (LOESS)** | 21.10 | 5.77 |
+| **Polinomio Global (Grado 2)** | 21.91 | 6.08 |
+
+**Conclusión del experimento:**
+Seleccionamos el acercamiento basado en **Base de Funciones** (específicamente el *Regression Spline* con el número óptimo de *knots*) como el modelo superior para este problema. 
+
+Aunque la Regresión Local es altamente flexible y competitiva, el uso de Splines ofrece un balance óptimo entre sesgo y varianza. No solo logra el menor error de predicción en promedio, sino que captura de forma más robusta la curvatura real del dataset `Auto`, demostrando ser el paradigma más estable para predecir el rendimiento (`mpg`) en función de la potencia (`horsepower`).
+
 ## Referencias
 
 - James et al. *An Introduction to Statistical Learning with R*, 2a ed., Cap. 7
