@@ -77,7 +77,7 @@ Para una unidad estadística individual $i$, el estimador se construye utilizand
 
 $$\hat{x}_i(t) = \frac{\sum_{j=1}^{n_i} K\left(\frac{t - t_{ij}}{h}\right) x_{ij}}{\sum_{j=1}^{n_i} K\left(\frac{t - t_{ij}}{h}\right)}$$
 
-Donde $K(\cdot)$ es una función Kernel (usualmente un Kernel Gaussiano) y $h$ es el parámetro de suavizado (ancho de banda o *bandwidth*).
+Donde $K(\cdot)$ es una función Kernel y $h$ es el parámetro de suavizado.
 
 ### (8) Estimador de Nadaraya-Watson para la función media $\hat{\mu}(t)$
 
