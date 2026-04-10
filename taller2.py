@@ -491,8 +491,10 @@ def graficar_resultados(train, test, K_optimo, ecm_knots,
     Se visualizan los resultados de los puntos 2 al 5 en una figura con
     cuatro paneles, siguiendo el estilo de los gráficos de la Sesión 3.
     """
-    hp_range = np.linspace(train["horsepower"].min() - 5,
-                           train["horsepower"].max() + 5, 400)
+    # Se usa el rango interno de HP (sin extrapolar) para evitar
+    # inestabilidad numérica del smoothing spline fuera de su dominio
+    hp_range = np.linspace(train["horsepower"].min(),
+                           train["horsepower"].max(), 400)
     X_range  = hp_range.reshape(-1, 1)
 
     fig = plt.figure(figsize=(14, 10))
@@ -525,9 +527,13 @@ def graficar_resultados(train, test, K_optimo, ecm_knots,
     ax2.plot(hp_range, pred_rs_range, color="dodgerblue", linewidth=2, linestyle="--",
              label=f"Reg. Spline K={K_optimo}")
 
-    # Smoothing spline
+    # Smoothing spline (limitado al rango de datos para evitar explosión)
     pred_ss_range = mod_ss(hp_range)
-    ax2.plot(hp_range, pred_ss_range, color="purple", linewidth=2, linestyle=":",
+    y_margin = train["mpg"].max() - train["mpg"].min()
+    y_lo = train["mpg"].min() - 0.2 * y_margin
+    y_hi = train["mpg"].max() + 0.2 * y_margin
+    pred_ss_clipped = np.clip(pred_ss_range, y_lo, y_hi)
+    ax2.plot(hp_range, pred_ss_clipped, color="purple", linewidth=2, linestyle=":",
              label="Smooth Spline")
 
     ax2.set_xlabel("HP")

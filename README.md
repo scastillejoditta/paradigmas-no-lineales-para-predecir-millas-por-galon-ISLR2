@@ -7,7 +7,7 @@
 **Maestría:** Matemáticas Aplicadas y Ciencias de la Computación  
 **Semestre:** 2026/1  
 **Universidad:** Universidad del Rosario  
-
+**Repositorio:** https://github.com/jrodriguez-dev/paradigmas-no-lineales-para-predecir-millas-por-galon-ISLR2
 ---
 
 ## Descripción
@@ -29,7 +29,7 @@ Al final, lanzamos el experimento 10 veces para elegir el método que mejor resu
 
 | Archivo            | Descripción                                                 |
 | ------------------ | ----------------------------------------------------------- |
-| `taller2.py`       | Script Python con la solución completa de los puntos 1 al 5 |
+| `taller2.py`       | Script Python con la solución completa de los puntos 1 al 6 |
 | `requirements.txt` | Dependencias de Python                                      |
 
 ## Métodos implementados
@@ -50,6 +50,75 @@ pip install -r requirements.txt # instalar dependencias
 python taller2.py # ejecutar código
 ```
 
+---
+
+## Resultados
+
+### Punto 1 – Separación de datos
+
+Se divide aleatoriamente el dataset Auto (392 observaciones) en **90 % entrenamiento (352)** y **10 % prueba (40)** con semilla fija para reproducibilidad.
+
+### Punto 2 – Selección del número óptimo de knots
+
+Se evalúa el ECM por validación cruzada (10-folds) para $K = 1, ..., 10$ knots igualmente espaciados en el rango de horsepower.
+
+| K     | ECM (CV)             |
+| ----- | -------------------- |
+| 1     | 19.2579              |
+| 2     | 19.0825              |
+| 3     | 18.8154              |
+| **4** | **18.7018** ← óptimo |
+| 5     | 18.8491              |
+| 6     | 18.8218              |
+| 7     | 18.9979              |
+| 8     | 19.1557              |
+| 9     | 19.1201              |
+| 10    | 19.2963              |
+
+**Resultado:** $K = 4$ knots minimiza el ECM de validación cruzada.
+
+### Punto 3 – Comparación de modelos basados en base de funciones
+
+Se comparan tres modelos por CV 10-folds:
+
+| Modelo                | ECM (CV 10-folds) |
+| --------------------- | ----------------- |
+| Polinomio grado 2     | 19.0162           |
+| Smoothing Spline      | 33.1108           |
+| **Reg. Spline (K=4)** | **18.7018**       |
+
+**Modelo seleccionado:** Regression Spline con $K = 4$ knots.
+
+### Punto 4 – Regresión local (Nadaraya-Watson)
+
+Se comparan grados 1 y 2 del polinomio local con kernel gaussiano (ancho de banda por regla de Silverman):
+
+| Grado | ECM (CV 10-folds) |
+| ----- | ----------------- |
+| **1** | **18.6540**       |
+| 2     | 18.7327           |
+
+**Grado óptimo:** 1 (regresión local lineal).
+
+### Punto 5 – Evaluación final sobre datos de prueba
+
+Se ajustan los cuatro modelos sobre todo el entrenamiento y se evalúa el ECM en el 10 % de prueba externo:
+
+| Modelo                | ECM de prueba |
+| --------------------- | ------------- |
+| Polinomio grado 2     | 21.1061       |
+| **Reg. Spline (K=4)** | **20.5315**   |
+| Smoothing Spline      | 54.4134       |
+| Local grado 1         | 20.8462       |
+
+**Mejor modelo:** Regression Spline con $K = 4$ knots (ECM = 20.53).
+
+### Gráficas de los Puntos 2–5
+
+![Resultados de los puntos 2 al 5](resultados_taller2.png)
+
+---
+
 ## Justificación y Resultados Finales (Punto 6)
 
 Para asegurar que la elección del "mejor" modelo no fuera producto del azar de una sola partición de datos, realizamos una simulación de **10 repeticiones independientes**. En cada iteración, se generó una nueva partición (90% entrenamiento / 10% prueba) y se re-evaluaron los tres paradigmas principales desde cero (incluyendo la selección de hiperparámetros óptimos por validación cruzada).
@@ -58,9 +127,11 @@ Los resultados de error cuadrático medio (ECM) de prueba consolidados fueron:
 
 | Paradigma                       | ECM Promedio (10 iter) | Desviación Estándar |
 | ------------------------------- | ---------------------- | ------------------- |
-| **Base de Funciones (Splines)** | **20.81**              | 6.30                |
-| **Regresión Local (LOESS)**     | 21.10                  | 5.77                |
-| **Polinomio Global (Grado 2)**  | 21.91                  | 6.08                |
+| **Base de Funciones (Splines)** | **20.93**              | 6.36                |
+| **Regresión Local (LOESS)**     | 21.11                  | 5.78                |
+| **Polinomio Global (Grado 2)**  | 21.92                  | 6.09                |
+
+![Distribución del ECM por paradigma (10 repeticiones)](comparacion_paradigmas_p6.png)
 
 **Conclusión del experimento:**
 Seleccionamos el acercamiento basado en **Base de Funciones** (específicamente el *Regression Spline* con el número óptimo de *knots*) como el modelo superior para este problema. 
