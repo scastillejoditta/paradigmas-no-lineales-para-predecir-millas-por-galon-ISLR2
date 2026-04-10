@@ -7,7 +7,7 @@
 **Maestría:** Matemáticas Aplicadas y Ciencias de la Computación  
 **Semestre:** 2026/1  
 **Universidad:** Universidad del Rosario  
-**Repositorio:** https://github.com/jrodriguez-dev/paradigmas-no-lineales-para-predecir-millas-por-galon-ISLR2
+**Repositorio:** https://github.com/scastillejoditta/paradigmas-no-lineales-para-predecir-millas-por-galon-ISLR2
 ---
 
 ## Descripción
